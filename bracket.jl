@@ -86,26 +86,49 @@ for team in team_names
 end
 @assert right_number_of_probabilities
 
-bracket = Array{Array{AbstractString, 1}, 1}()
-push!(bracket, team_names)
+# Using this tree type to pretty print.
+# http://stackoverflow.com/questions/4965335/how-to-print-binary-tree-diagram
+
+type PPTreeNode
+  name::AbstractString
+  children::Array{PPTreeNode}
+
+  PPTreeNode(n::AbstractString, c::Array{PPTreeNode}) = new(n, c)
+end
+# Note: This has to be a dimension 1 Array, or else it will initialize
+# to a dimension 0 array. But dimension 0 arrays have length 1, so
+# when we loop over the children, it will try to index into an empty array.
+PPTreeNode(n::AbstractString) = PPTreeNode(n, Array{PPTreeNode, 1}())
+
+function print(x::PPTreeNode)
+  print(x, "", true)
+end
+
+function print(x::PPTreeNode, prefix::AbstractString, is_tail::Bool)
+  println(prefix, (is_tail ? "└── " : "├── "), x.name)
+  for i=1:length(x.children)
+    print(x.children[i], prefix * (is_tail ? "    " : "│   "), i == length(x.children))
+  end
+end
+
+bracket = Array{Array{PPTreeNode, 1}, 1}()
+first_round = Array{PPTreeNode, 1}()
+for team in team_names
+  push!(first_round, PPTreeNode(team))
+end
+push!(bracket, first_round)
 
 for round_id in 1:num_rounds
   last_round_teams = bracket[end]
-  next_round_teams = Array{AbstractString, 1}()
+  next_round_teams = Array{PPTreeNode, 1}()
   for i in 1:div(length(last_round_teams),2)
     first, second = last_round_teams[2*i-1], last_round_teams[2*i]
-    probs = [probabilities[first][round_id], probabilities[second][round_id]]
-    winner = sample([first, second], WeightVec(probs))
-    push!(next_round_teams, winner)
+    probs = [probabilities[first.name][round_id], probabilities[second.name][round_id]]
+    winner = sample([first.name, second.name], WeightVec(probs))
+    push!(next_round_teams, PPTreeNode(winner, [first, second]))
   end
-
   push!(bracket, next_round_teams)
 end
+bracket = bracket[end][end]
 
-# TODO: Make this display nicely?
-for i in 1:num_rounds+1
-  println("Round ", i)
-  for team in bracket[i]
-    println(team)
-  end
-end
+print(bracket)
