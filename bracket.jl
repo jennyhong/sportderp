@@ -111,15 +111,12 @@ function print(x::PPTreeNode, prefix::AbstractString, is_tail::Bool)
   end
 end
 
-bracket = Array{Array{PPTreeNode, 1}, 1}()
-first_round = Array{PPTreeNode, 1}()
+last_round_teams = Array{PPTreeNode, 1}()
 for team in team_names
-  push!(first_round, PPTreeNode(team))
+  push!(last_round_teams, PPTreeNode(team))
 end
-push!(bracket, first_round)
 
 for round_id in 1:num_rounds
-  last_round_teams = bracket[end]
   next_round_teams = Array{PPTreeNode, 1}()
   for i in 1:div(length(last_round_teams),2)
     first, second = last_round_teams[2*i-1], last_round_teams[2*i]
@@ -127,8 +124,9 @@ for round_id in 1:num_rounds
     winner = sample([first.name, second.name], WeightVec(probs))
     push!(next_round_teams, PPTreeNode(winner, [first, second]))
   end
-  push!(bracket, next_round_teams)
+  last_round_teams = next_round_teams
 end
-bracket = bracket[end][end]
+@assert length(last_round_teams) == 1
+bracket = last_round_teams[1]
 
 print(bracket)
